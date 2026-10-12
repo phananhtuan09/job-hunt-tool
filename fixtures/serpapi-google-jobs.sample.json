@@ -1,0 +1,60 @@
+{
+  "_note": "Synthetic sample built from the documented SerpApi google_jobs response shape. Replace with a real recorded response when a live search is approved.",
+  "jobs_results": [
+    {
+      "title": "Senior Frontend Developer (ReactJS)",
+      "company_name": "Acme Vietnam",
+      "location": "Ho Chi Minh City, Vietnam",
+      "via": "via LinkedIn",
+      "description": "Build React and TypeScript apps. Requires 3+ năm kinh nghiệm. Hybrid working model.",
+      "extensions": ["2 ngày trước", "Toàn thời gian", "25 Tr ₫–35 Tr ₫ một tháng"],
+      "detected_extensions": { "posted_at": "2 ngày trước", "salary": "25 Tr ₫–35 Tr ₫ một tháng" },
+      "apply_options": [{ "title": "Ứng tuyển trên LinkedIn", "link": "https://example.com/linkedin/acme-senior-fe" }]
+    },
+    {
+      "title": "Senior Frontend Developer (ReactJS)",
+      "company_name": "ACME VIETNAM",
+      "location": "TP. Hồ Chí Minh",
+      "via": "via TopCV",
+      "description": "Build React and TypeScript apps.",
+      "detected_extensions": { "posted_at": "1 ngày trước" },
+      "apply_options": [{ "title": "Apply on TopCV", "link": "https://example.com/topcv/acme-senior-fe" }]
+    },
+    {
+      "title": "Fullstack Developer",
+      "company_name": "Globex",
+      "location": "Hanoi, Vietnam",
+      "via": "via ITviec",
+      "description": "Node.js and Vue. 2-4 years of experience.",
+      "detected_extensions": { "posted_at": "1 ngày trước", "salary": "Thỏa thuận" },
+      "apply_options": [{ "title": "Apply on ITviec", "link": "https://example.com/itviec/globex-fullstack" }]
+    },
+    {
+      "title": "Junior Frontend Developer",
+      "company_name": "Initech",
+      "location": "Ho Chi Minh City, Vietnam",
+      "via": "via Indeed",
+      "description": "Remote friendly. 1 năm kinh nghiệm.",
+      "detected_extensions": { "posted_at": "5 giờ trước", "salary": "Up to $2000", "work_from_home": true },
+      "apply_options": [{ "title": "Apply on Indeed", "link": "https://example.com/indeed/initech-junior-fe" }]
+    },
+    {
+      "title": "Frontend Developer",
+      "company_name": "LowPay Co",
+      "location": "Ho Chi Minh City, Vietnam",
+      "via": "via TopDev",
+      "description": "Vue developer.",
+      "detected_extensions": { "posted_at": "3 ngày trước", "salary": "8 Tr ₫–12 Tr ₫ một tháng" },
+      "apply_options": [{ "title": "Apply on TopDev", "link": "https://example.com/topdev/lowpay-fe" }]
+    },
+    {
+      "title": "Frontend Developer",
+      "company_name": "Stale Corp",
+      "location": "Ho Chi Minh City, Vietnam",
+      "via": "via TopCV",
+      "description": "React developer.",
+      "detected_extensions": { "posted_at": "21 ngày trước" },
+      "apply_options": [{ "title": "Apply on TopCV", "link": "https://example.com/topcv/stale-fe" }]
+    }
+  ]
+}
