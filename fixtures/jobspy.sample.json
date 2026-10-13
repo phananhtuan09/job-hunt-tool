@@ -1,0 +1,36 @@
+[
+  {
+    "id": "li-12345",
+    "site": "linkedin",
+    "job_url": "https://www.linkedin.com/jobs/view/12345",
+    "job_url_direct": "https://www.linkedin.com/jobs/view/12345",
+    "title": "Senior Frontend Developer (React, Next.js)",
+    "company": "FPT Software",
+    "location": "Ho Chi Minh City, Vietnam",
+    "date_posted": "2026-10-12",
+    "job_type": "fulltime",
+    "interval": "monthly",
+    "min_amount": 30000000.0,
+    "max_amount": 45000000.0,
+    "currency": "VND",
+    "is_remote": false,
+    "description": "FPT Software is looking for a Senior Frontend Developer with 3+ years experience in React and TypeScript. Hybrid working model."
+  },
+  {
+    "id": "ind-67890",
+    "site": "indeed",
+    "job_url": "https://vn.indeed.com/viewjob?jk=67890",
+    "job_url_direct": null,
+    "title": "Junior Fullstack Engineer",
+    "company": "VNG Corporation",
+    "location": "Hanoi",
+    "date_posted": "2026-10-11",
+    "job_type": "fulltime",
+    "interval": null,
+    "min_amount": null,
+    "max_amount": null,
+    "currency": null,
+    "is_remote": true,
+    "description": "VNG Corporation seeks a Junior Fullstack Engineer with 1-2 years experience. Work remote from home."
+  }
+]

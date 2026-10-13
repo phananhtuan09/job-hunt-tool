@@ -1,0 +1,64 @@
+{
+  "data": [
+    {
+      "id": 2138283,
+      "title": "Full Stack Developer (NodeJS/ReactJS)",
+      "content": "<p>SoftFlex is looking for a Full Stack Developer with 2-4 years experience. Remote work.</p>",
+      "company": {
+        "id": 97174,
+        "display_name": "SoftFlex LLC",
+        "detail_url": "https://topdev.vn/companies/softflex-97174"
+      },
+      "skills_str": "NodeJS, ReactJS, TypeScript",
+      "addresses": {
+        "sort_addresses": " Hà Nội",
+        "full_addresses": [
+          "Tầng 7, Epic Tower, Duy Tân, Hà Nội"
+        ]
+      },
+      "detail_url": "https://topdev.vn/detail-jobs/full-stack-developer-nodejs-reactjs-softflex-2138283",
+      "salary": {
+        "is_negotiable": "0",
+        "unit": "MONTH",
+        "min": "20000000",
+        "max": "35000000",
+        "currency": "VND"
+      },
+      "published": {
+        "date": "13-10-2026",
+        "datetime": "00:00:00 13-10-2026",
+        "since": "22 hours ago"
+      }
+    },
+    {
+      "id": 2138284,
+      "title": "Senior Frontend Developer",
+      "content": "<p>Senior Frontend Developer needed. 4+ years of React. Hybrid mode in HCMC.</p>",
+      "company": {
+        "id": 88001,
+        "display_name": "VNPAY",
+        "detail_url": "https://topdev.vn/companies/vnpay-88001"
+      },
+      "skills_str": "ReactJS, Next.js, Redux",
+      "addresses": {
+        "sort_addresses": " Hồ Chí Minh",
+        "full_addresses": [
+          "Quận 1, TP Hồ Chí Minh"
+        ]
+      },
+      "detail_url": "https://topdev.vn/detail-jobs/senior-frontend-developer-vnpay-2138284",
+      "salary": {
+        "is_negotiable": "1",
+        "unit": "MONTH",
+        "min": "*",
+        "max": "*",
+        "currency": "VND"
+      },
+      "published": {
+        "date": "12-10-2026",
+        "datetime": "00:00:00 12-10-2026",
+        "since": "1 days ago"
+      }
+    }
+  ]
+}

@@ -112,4 +112,41 @@ describe("runPipeline", () => {
     await runPipeline(config, deps);
     expect(fetched).toBe(0);
   });
+
+  it("isolates errors per source and collects per-source stats and logs", async () => {
+    const logs: string[] = [];
+    const failingAdapter: SourceAdapter = {
+      name: "failing",
+      fetch: async () => { throw new Error("Failing 500"); },
+      normalize: (raw) => raw as unknown as Job,
+    };
+    const healthyAdapter = fakeAdapter([testJob({ id: "healthy-1" })], { name: "healthy" });
+
+    const { deps } = setup(healthyAdapter);
+    deps.adapters = [failingAdapter, healthyAdapter];
+    deps.log = (msg) => logs.push(msg);
+
+    const result = await runPipeline(config, deps);
+    expect(result.newJobs).toBe(1);
+    expect(result.sources["failing"]!.failedQueries).toBeGreaterThan(0);
+    expect(result.sources["healthy"]!.newJobs).toBe(1);
+    expect(logs.some((l) => l.includes("healthy: fetched"))).toBe(true);
+  });
+
+  it("times out slow adapter queries without breaking healthy adapters", async () => {
+    const slowAdapter: SourceAdapter = {
+      name: "slow",
+      fetch: async () => new Promise((resolve) => setTimeout(resolve, 500)),
+      normalize: (raw) => raw as unknown as Job,
+    };
+    const fastAdapter = fakeAdapter([testJob({ id: "fast-1" })], { name: "fast" });
+
+    const { deps } = setup(fastAdapter);
+    deps.adapters = [slowAdapter, fastAdapter];
+    deps.queryTimeoutMs = 50;
+
+    const result = await runPipeline(config, deps);
+    expect(result.newJobs).toBe(1);
+    expect(result.sources["slow"]!.failedQueries).toBeGreaterThan(0);
+  });
 });

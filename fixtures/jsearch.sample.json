@@ -1,0 +1,53 @@
+{
+  "status": "OK",
+  "request_id": "req-12345",
+  "parameters": {
+    "query": "frontend developer in Ho Chi Minh City",
+    "page": 1,
+    "num_pages": 1
+  },
+  "data": [
+    {
+      "job_id": "js-1",
+      "job_title": "Senior Frontend Engineer (React/TypeScript)",
+      "employer_name": "Kite Metric Co",
+      "job_city": "Ho Chi Minh City",
+      "job_state": "Ho Chi Minh",
+      "job_country": "VN",
+      "job_apply_link": "https://kitemetric.com/careers/senior-fe",
+      "job_description": "We are seeking a Senior Frontend Engineer with 4+ years of experience in React, TypeScript, and Tailwind CSS. Competitive salary 35-50M VND.",
+      "job_is_remote": false,
+      "job_posted_at_datetime_utc": "2026-10-12T10:00:00.000Z",
+      "job_required_experience": {
+        "no_experience_required": false,
+        "required_experience_in_months": 48,
+        "experience_mentioned": true
+      },
+      "job_min_salary": 35000000,
+      "job_max_salary": 50000000,
+      "job_salary_currency": "VND",
+      "job_salary_period": "MONTH"
+    },
+    {
+      "job_id": "js-2",
+      "job_title": "Junior Fullstack Developer",
+      "employer_name": "VN Tech Labs",
+      "job_city": "Hanoi",
+      "job_state": "Hanoi",
+      "job_country": "VN",
+      "job_apply_link": "https://vntechlabs.vn/jobs/junior-fs",
+      "job_description": "Looking for Junior Fullstack Developer (Node.js, Vue). 1-2 years experience required. Remote friendly.",
+      "job_is_remote": true,
+      "job_posted_at_datetime_utc": "2026-10-11T08:00:00.000Z",
+      "job_required_experience": {
+        "no_experience_required": false,
+        "required_experience_in_months": 12,
+        "experience_mentioned": true
+      },
+      "job_min_salary": null,
+      "job_max_salary": null,
+      "job_salary_currency": null,
+      "job_salary_period": null
+    }
+  ]
+}

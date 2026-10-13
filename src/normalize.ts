@@ -24,8 +24,23 @@ export function normalizeCity(location: string | null | undefined): string | nul
   return first;
 }
 
+export function normalizeCompany(name: string): string {
+  let text = normalizeText(name);
+  text = text.replace(/^(cong ty|cty)\s+(tnhh\s+mtv|tnhh|co phan|cp)\s+/g, "");
+  text = text.replace(/^(tnhh\s+mtv|tnhh|co phan|cp)\s+/g, "");
+  text = text.replace(/\s+(co\s+ltd|ltd|llc|inc|corp|corporation|jsc|vietnam|viet nam)$/g, "");
+  return text.trim() || normalizeText(name);
+}
+
+export function normalizeJobTitle(title: string): string {
+  let text = normalizeText(title);
+  text = text.replace(/\b(urgent|hot|tuyen gap|gap)\b/g, "").trim();
+  return text || normalizeText(title);
+}
+
 export function jobId(company: string, title: string, city: string | null): string {
-  const key = [normalizeText(company), normalizeText(title), normalizeText(city ?? "")].join("|");
+  const normCity = normalizeCity(city) ?? normalizeText(city ?? "");
+  const key = [normalizeCompany(company), normalizeJobTitle(title), normCity].join("|");
   return createHash("sha256").update(key).digest("hex").slice(0, 16);
 }
 
@@ -62,6 +77,9 @@ export function parseSalary(text: string | null | undefined): Salary {
     .reverse();
 
   result.currency = /\$|usd/.test(t) ? "USD" : /₫|vnd|đ|triệu|\btr\b/.test(t) ? "VND" : amounts.some((a) => a >= 1e6) ? "VND" : null;
+  if (!result.currency) {
+    return { salaryMin: null, salaryMax: null, currency: null, negotiable: result.negotiable };
+  }
   const perYear = /\/\s*(năm|year|yr)|một năm|per year|a year|annual/.test(t) ? 12 : 1;
   const [first, second] = amounts.map((a) => Math.round(a / perYear)) as [number, number | undefined];
   if (second !== undefined) {

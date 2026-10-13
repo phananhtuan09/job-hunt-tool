@@ -8,11 +8,17 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "start": "tsx --env-file=.env src/index.ts"
+    "start": "tsx --env-file=.env src/index.ts",
+    "dashboard:dev": "pnpm --filter job-hunt-dashboard dev",
+    "dashboard:build": "pnpm --filter job-hunt-dashboard build",
+    "dashboard:start": "pnpm --filter job-hunt-dashboard start"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.117.3",
+    "cheerio": "^1.2.0",
     "csv-parse": "^7.0.3",
     "csv-stringify": "^6.9.0",
+    "execa": "^10.1.0",
     "yaml": "^2.9.1",
     "zod": "^4.6.5"
   },

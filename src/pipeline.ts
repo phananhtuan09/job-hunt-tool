@@ -1,18 +1,28 @@
 import type { Config } from "./config.js";
 import { evaluateMatch } from "./match.js";
 import { addQuotaUsed, quotaUsed, readJobs, writeJobs } from "./store.js";
+import type { JobStore } from "./supabase.js";
 import type { Notifier } from "./telegram.js";
 import type { Job, SourceAdapter } from "./types.js";
 
 export const MAX_NOTIFICATIONS_PER_RUN = 20;
+
+export interface SourceStats {
+  fetched: number;
+  newJobs: number;
+  failedQueries: number;
+}
 
 export interface PipelineDeps {
   adapters: SourceAdapter[];
   notifier: Notifier | null;
   jobsPath: string;
   quotaPath: string;
+  store?: JobStore;
+  llmNormalizer?: { enhance(job: Job): Promise<Job> };
   now?: Date;
   delayMs?: number;
+  queryTimeoutMs?: number;
   log?: (message: string) => void;
 }
 
@@ -22,9 +32,22 @@ export interface RunResult {
   notified: number;
   failedQueries: number;
   notifyFailed: boolean;
+  sources: Record<string, SourceStats>;
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function withTimeout<T>(promise: Promise<T>, ms: number, message = "Operation timed out"): Promise<T> {
+  let timeoutId: NodeJS.Timeout | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(message)), ms);
+  });
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
 
 function mergeSources(target: Job, extra: Job): boolean {
   let changed = false;
@@ -41,34 +64,59 @@ export async function runPipeline(config: Config, deps: PipelineDeps): Promise<R
   const now = deps.now ?? new Date();
   const log = deps.log ?? (() => {});
   const delayMs = deps.delayMs ?? 1000;
+  const timeoutMs = deps.queryTimeoutMs ?? 30000;
 
-  const stored = readJobs(deps.jobsPath);
+  const stored = deps.store ? await deps.store.readJobs() : readJobs(deps.jobsPath);
   const byId = new Map(stored.map((j) => [j.id, j]));
   const seenThisRun = new Map<string, Job>();
+  const sourceStats: Record<string, SourceStats> = {};
+  const jobOriginSource = new Map<string, string>();
+
   let succeededQueries = 0;
   let failedQueries = 0;
   let fetched = 0;
 
   for (const adapter of deps.adapters) {
+    if (!sourceStats[adapter.name]) {
+      sourceStats[adapter.name] = { fetched: 0, newJobs: 0, failedQueries: 0 };
+    }
+    const stats = sourceStats[adapter.name]!;
+
     for (const keyword of config.keywords) {
       for (const location of config.locations) {
-        if (adapter.monthlyQuota !== undefined && quotaUsed(deps.quotaPath, adapter.name, now) >= adapter.monthlyQuota) {
+        const usedQuota = deps.store
+          ? await deps.store.quotaUsed(adapter.name, now)
+          : quotaUsed(deps.quotaPath, adapter.name, now);
+
+        if (adapter.monthlyQuota !== undefined && usedQuota >= adapter.monthlyQuota) {
           log(`${adapter.name}: monthly quota reached, skipping`);
           continue;
         }
         try {
-          const raws = await adapter.fetch({ keyword, location });
-          addQuotaUsed(deps.quotaPath, adapter.name, now);
+          const fetchPromise = adapter.fetch({ keyword, location });
+          const raws = await withTimeout(fetchPromise, timeoutMs, `${adapter.name} query timed out after ${timeoutMs}ms`);
+          if (deps.store) {
+            await deps.store.addQuotaUsed(adapter.name, now);
+          } else {
+            addQuotaUsed(deps.quotaPath, adapter.name, now);
+          }
           succeededQueries++;
+          stats.fetched += raws.length;
+
           for (const raw of raws) {
             const job = adapter.normalize(raw, now);
             fetched++;
             const earlier = seenThisRun.get(job.id);
-            if (earlier) mergeSources(earlier, job);
-            else seenThisRun.set(job.id, job);
+            if (earlier) {
+              mergeSources(earlier, job);
+            } else {
+              seenThisRun.set(job.id, job);
+              jobOriginSource.set(job.id, adapter.name);
+            }
           }
         } catch (error) {
           failedQueries++;
+          stats.failedQueries++;
           log(`${adapter.name}: query "${keyword}" in "${location}" failed: ${(error as Error).message}`);
         }
         await sleep(delayMs);
@@ -87,9 +135,22 @@ export async function runPipeline(config: Config, deps: PipelineDeps): Promise<R
     if (existing) {
       if (mergeSources(existing, job)) storedChanged = true;
     } else {
-      job.matched = evaluateMatch(job, config, now);
-      newJobs.push(job);
+      let finalJob = job;
+      if (deps.llmNormalizer) {
+        finalJob = await deps.llmNormalizer.enhance(job);
+      }
+      finalJob.matched = evaluateMatch(finalJob, config, now);
+      newJobs.push(finalJob);
+      const origin = jobOriginSource.get(job.id);
+      if (origin && sourceStats[origin]) {
+        sourceStats[origin]!.newJobs++;
+      }
     }
+  }
+
+  // Summary log per source
+  for (const [name, stats] of Object.entries(sourceStats)) {
+    log(`${name}: fetched ${stats.fetched}, new ${stats.newJobs}, failed ${stats.failedQueries}`);
   }
 
   const telegram = config.notify.telegram;
@@ -113,7 +174,20 @@ export async function runPipeline(config: Config, deps: PipelineDeps): Promise<R
 
   // Jobs that still need a notification stay unstored so the next run retries them.
   const toStore = newJobs.filter((j) => !toNotify.includes(j) || notifiedIds.has(j.id));
-  if (toStore.length > 0 || storedChanged) writeJobs(deps.jobsPath, [...stored, ...toStore]);
+  if (toStore.length > 0 || storedChanged) {
+    if (deps.store) {
+      await deps.store.writeJobs([...stored, ...toStore]);
+    } else {
+      writeJobs(deps.jobsPath, [...stored, ...toStore]);
+    }
+  }
 
-  return { fetched, newJobs: newJobs.length, notified: notifiedIds.size, failedQueries, notifyFailed };
+  return {
+    fetched,
+    newJobs: newJobs.length,
+    notified: notifiedIds.size,
+    failedQueries,
+    notifyFailed,
+    sources: sourceStats,
+  };
 }
