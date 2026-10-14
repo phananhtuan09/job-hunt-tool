@@ -5,7 +5,7 @@ import { stringify } from "csv-stringify/sync";
 import type { Job, JobSource } from "./types.js";
 
 const COLUMNS = [
-  "id", "title", "company", "city", "level", "expMin", "expMax", "salaryMin", "salaryMax", "currency",
+  "id", "title", "company", "url", "city", "level", "expMin", "expMax", "salaryMin", "salaryMax", "currency",
   "negotiable", "remote", "skills", "sources", "description", "postedAt", "firstSeenAt", "matched", "status",
 ] as const;
 
@@ -55,7 +55,12 @@ export function readJobs(path: string): Job[] {
 }
 
 export function writeJobs(path: string, jobs: Job[]): void {
-  const rows = jobs.map((j) => ({ ...j, skills: j.skills.join("|"), sources: JSON.stringify(j.sources) }));
+  const rows = jobs.map((j) => ({
+    ...j,
+    url: j.sources[0]?.url ?? "",
+    skills: j.skills.join("|"),
+    sources: JSON.stringify(j.sources),
+  }));
   writeAtomic(path, stringify(rows, { header: true, columns: [...COLUMNS], cast: { boolean: (v) => String(v) } }));
 }
 
