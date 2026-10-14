@@ -2,17 +2,35 @@
 """JobSpy CLI wrapper that prints a JSON list of jobs to stdout."""
 import argparse
 import json
+import math
 import sys
 from datetime import date, datetime
 import pandas as pd
 
 
+def clean_value(val):
+    if val is None:
+        return None
+    if isinstance(val, float) and (math.isnan(val) or math.isinf(val)):
+        return None
+    try:
+        if pd.isna(val):
+            return None
+    except Exception:
+        pass
+    if isinstance(val, (datetime, date)):
+        return val.isoformat()
+    if isinstance(val, dict):
+        return {k: clean_value(v) for k, v in val.items()}
+    if isinstance(val, list):
+        return [clean_value(v) for v in val]
+    return val
+
+
 def json_serial(obj):
     if isinstance(obj, (datetime, date)):
         return obj.isoformat()
-    if pd.isna(obj):
-        return None
-    raise TypeError(f"Type {type(obj)} not serializable")
+    return None
 
 
 def main():
@@ -44,12 +62,11 @@ def main():
         if jobs_df is None or jobs_df.empty:
             records = []
         else:
-            # Replace NaN with None
-            jobs_df = jobs_df.where(pd.notnull(jobs_df), None)
-            records = jobs_df.to_dict(orient="records")
+            raw_records = jobs_df.to_dict(orient="records")
+            records = [{k: clean_value(v) for k, v in r.items()} for r in raw_records]
 
-        # Serialize cleanly
-        sys.stdout.write(json.dumps(records, default=json_serial))
+        # Serialize cleanly without NaN
+        sys.stdout.write(json.dumps(records, default=json_serial, allow_nan=False))
         sys.stdout.flush()
     except Exception as exc:
         sys.stderr.write(f"JobSpy scrape error: {exc}\n")

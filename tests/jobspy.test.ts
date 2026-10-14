@@ -90,4 +90,18 @@ describe("jobspy adapter", () => {
 
     await expect(adapter.fetch({ keyword: "x", location: "y" })).rejects.toThrow(/JobSpy scrape failed: HTTP 429/);
   });
+
+  it("handles and sanitizes NaN values in stdout gracefully", async () => {
+    const rawWithNaN = `[{"title": "Dev", "company": "Tech Corp", "min_amount": NaN, "max_amount": NaN}]`;
+    const runner: JobSpyRunner = async () => ({ stdout: rawWithNaN });
+    const adapter = createJobSpyAdapter({
+      sites: ["indeed"],
+      postedWithinDays: 3,
+      runner,
+    });
+
+    const raw = await adapter.fetch({ keyword: "dev", location: "Hanoi" });
+    expect(raw).toHaveLength(1);
+    expect(raw[0]!.min_amount).toBeNull();
+  });
 });

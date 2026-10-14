@@ -6,10 +6,10 @@ salary: { minVND: 20000000, includeNegotiable: true }
 remote: any # any | remote | onsite | hybrid
 postedWithinDays: 3
 sources:
-  serpapi: { enabled: true, pagesPerQuery: 1 }
-  jsearch: { enabled: true }
+  serpapi: { enabled: false, pagesPerQuery: 1 }
+  jsearch: { enabled: false }
   jobspy: { enabled: true, sites: ["linkedin", "indeed"] }
   itviec: { enabled: true }
   topdev: { enabled: true }
 notify:
-  telegram: { enabled: true, onlyMatched: true }
+  telegram: { enabled: false, onlyMatched: true }

@@ -77,7 +77,11 @@ export function createJobSpyAdapter(options: JobSpyOptions): SourceAdapter {
 
       try {
         const { stdout } = await run(args);
-        const parsed = JSON.parse(stdout);
+        const sanitized = stdout
+          .replace(/:\s*NaN\b/g, ": null")
+          .replace(/:\s*Infinity\b/g, ": null")
+          .replace(/:\s*-Infinity\b/g, ": null");
+        const parsed = JSON.parse(sanitized);
         if (!Array.isArray(parsed)) return [];
         return parsed.filter((r): r is RawJob => jobspyJobSchema.safeParse(r).success);
       } catch (error) {
