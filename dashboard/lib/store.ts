@@ -1,6 +1,8 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { parse } from "csv-parse/sync";
+import { stringify } from "csv-stringify/sync";
 import type { Job, JobSource, Status } from "./types.js";
 
 let cachedClient: SupabaseClient | null = null;
@@ -26,64 +28,39 @@ function findCsvPath(): string | null {
 }
 
 function parseCsvJobs(content: string): Job[] {
-  const lines = content.split("\n").filter((l) => l.trim().length > 0);
-  if (lines.length <= 1) return [];
-
-  // Simple CSV parser for stored rows
-  const headers = lines[0]!.split(",");
-  const jobs: Job[] = [];
-
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i]!;
-    // Match CSV columns handling quoted values
-    const regex = /(?:^|,)(?:"((?:[^"]|"")*)"|([^,]*))/g;
-    const values: string[] = [];
-    let match;
-    while ((match = regex.exec(line)) !== null) {
-      values.push((match[1] ? match[1].replace(/""/g, '"') : match[2] ?? "").trim());
-    }
-    if (values.length < 5) continue;
-
-    const row: Record<string, string> = {};
-    headers.forEach((h, idx) => {
-      row[h.trim()] = values[idx] ?? "";
-    });
-
+  if (!content || !content.trim()) return [];
+  const rows = parse(content, { columns: true, skip_empty_lines: true }) as Record<string, string>[];
+  return rows.map((r, i) => {
+    const skills = r.skills ? r.skills.split("|").filter(Boolean) : [];
+    let sources: JobSource[] = [];
     try {
-      const skills = row.skills ? row.skills.split("|").filter(Boolean) : [];
-      let sources: JobSource[] = [];
-      try {
-        sources = JSON.parse(row.sources || "[]");
-      } catch {
-        sources = [];
-      }
-
-      jobs.push({
-        id: row.id ?? `job-${i}`,
-        title: row.title ?? "",
-        company: row.company ?? "",
-        city: row.city || null,
-        level: (row.level as Job["level"]) || null,
-        expMin: row.expMin ? Number(row.expMin) : null,
-        expMax: row.expMax ? Number(row.expMax) : null,
-        salaryMin: row.salaryMin ? Number(row.salaryMin) : null,
-        salaryMax: row.salaryMax ? Number(row.salaryMax) : null,
-        currency: (row.currency as Job["currency"]) || null,
-        negotiable: row.negotiable === "true",
-        remote: (row.remote as Job["remote"]) || null,
-        skills,
-        sources,
-        description: row.description ?? "",
-        postedAt: row.postedAt || null,
-        firstSeenAt: row.firstSeenAt || new Date().toISOString(),
-        matched: row.matched === "true",
-        status: (row.status as Status) || "new",
-      });
+      sources = JSON.parse(r.sources || "[]");
     } catch {
-      // skip corrupted row
+      sources = r.url ? [{ site: "direct", url: r.url }] : [];
     }
-  }
-  return jobs;
+
+    return {
+      id: r.id ?? `job-${i}`,
+      title: r.title ?? "",
+      company: r.company ?? "",
+      city: r.city || null,
+      level: (r.level as Job["level"]) || null,
+      expMin: r.expMin ? Number(r.expMin) : null,
+      expMax: r.expMax ? Number(r.expMax) : null,
+      salaryMin: r.salaryMin ? Number(r.salaryMin) : null,
+      salaryMax: r.salaryMax ? Number(r.salaryMax) : null,
+      currency: (r.currency as Job["currency"]) || null,
+      negotiable: r.negotiable === "true",
+      remote: (r.remote as Job["remote"]) || null,
+      skills,
+      sources,
+      description: r.description ?? "",
+      postedAt: r.postedAt || null,
+      firstSeenAt: r.firstSeenAt || new Date().toISOString(),
+      matched: r.matched === "true",
+      status: (r.status as Status) || "new",
+    };
+  });
 }
 
 export async function fetchJobs(): Promise<Job[]> {
@@ -209,28 +186,22 @@ export async function updateJobStatus(id: string, status: Status): Promise<boole
   if (csvPath) {
     try {
       const content = readFileSync(csvPath, "utf8");
-      const lines = content.split("\n");
-      if (lines.length > 1) {
-        // Find column index for status and id
-        const headers = lines[0]!.split(",");
-        const statusIdx = headers.indexOf("status");
-        const idIdx = headers.indexOf("id");
-        if (statusIdx >= 0 && idIdx >= 0) {
-          const updatedLines = lines.map((line, idx) => {
-            if (idx === 0) return line;
-            const parts = line.split(",");
-            if (parts[idIdx] === id) {
-              parts[statusIdx] = status;
-              return parts.join(",");
-            }
-            return line;
-          });
-          writeFileSync(csvPath, updatedLines.join("\n"));
-          return true;
+      const rows = parse(content, { columns: true, skip_empty_lines: true }) as Record<string, string>[];
+      let found = false;
+      const updatedRows = rows.map((r) => {
+        if (r.id === id) {
+          found = true;
+          return { ...r, status };
         }
+        return r;
+      });
+      if (found) {
+        const columns = Object.keys(rows[0] ?? {});
+        writeFileSync(csvPath, stringify(updatedRows, { header: true, columns }));
+        return true;
       }
-    } catch {
-      // ignore
+    } catch (e) {
+      console.error("Failed to update status in CSV", e);
     }
   }
 

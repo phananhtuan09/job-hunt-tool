@@ -20,7 +20,7 @@ export default function DashboardPage() {
     city: "all",
     level: "all",
     remote: "all",
-    onlyMatched: false,
+    onlyMatched: true,
   });
 
   const checkAuthAndLoad = async () => {
