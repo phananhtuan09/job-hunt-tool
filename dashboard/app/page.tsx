@@ -2,8 +2,8 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { FilterBar, type FilterState } from "@/components/FilterBar";
-import { JobCard } from "@/components/JobCard";
-import { JobDetailModal } from "@/components/JobDetailModal";
+import { JobDetailPane } from "@/components/JobDetailPane";
+import { JobListItem } from "@/components/JobListItem";
 import { LoginModal } from "@/components/LoginModal";
 import { StatsHeader } from "@/components/StatsHeader";
 import type { Job, Status } from "@/lib/types";
@@ -12,7 +12,7 @@ export default function DashboardPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
-  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
 
   const [filters, setFilters] = useState<FilterState>({
     search: "",
@@ -25,6 +25,7 @@ export default function DashboardPage() {
 
   const checkAuthAndLoad = async () => {
     try {
+      setLoading(true);
       const authRes = await fetch("/api/auth");
       const authData = await authRes.json();
       if (!authData.authenticated) {
@@ -50,14 +51,11 @@ export default function DashboardPage() {
     checkAuthAndLoad();
   }, []);
 
-  const handleStatusChange = async (id: string, newStatus: Status) => {
+  const handleStatusUpdate = async (id: string, newStatus: Status) => {
     // Optimistic update
     setJobs((prev) =>
       prev.map((j) => (j.id === id ? { ...j, status: newStatus } : j))
     );
-    if (selectedJob && selectedJob.id === id) {
-      setSelectedJob((prev) => (prev ? { ...prev, status: newStatus } : null));
-    }
 
     try {
       const res = await fetch(`/api/jobs/${id}/status`, {
@@ -66,7 +64,6 @@ export default function DashboardPage() {
         body: JSON.stringify({ status: newStatus }),
       });
       if (!res.ok) {
-        // Rollback on error
         checkAuthAndLoad();
       }
     } catch {
@@ -123,99 +120,141 @@ export default function DashboardPage() {
     });
   }, [jobs, filters]);
 
+  // Keep selected job valid
+  const selectedJob = useMemo(() => {
+    if (filteredJobs.length === 0) return null;
+    const found = filteredJobs.find((j) => j.id === selectedJobId);
+    return found || filteredJobs[0] || null;
+  }, [filteredJobs, selectedJobId]);
+
+  // Sync selectedId when selection auto-shifts
+  useEffect(() => {
+    if (selectedJob && selectedJob.id !== selectedJobId) {
+      setSelectedJobId(selectedJob.id);
+    }
+  }, [selectedJob, selectedJobId]);
+
+  // Keyboard navigation: Up/Down arrow keys to select next/prev job
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept if user is typing in input or select
+      const activeTag = document.activeElement?.tagName?.toLowerCase();
+      if (activeTag === "input" || activeTag === "textarea" || activeTag === "select") {
+        return;
+      }
+
+      if (e.key === "ArrowDown" || e.key === "j") {
+        e.preventDefault();
+        const currentIndex = filteredJobs.findIndex((j) => j.id === selectedJob?.id);
+        if (currentIndex < filteredJobs.length - 1) {
+          setSelectedJobId(filteredJobs[currentIndex + 1]!.id);
+        }
+      } else if (e.key === "ArrowUp" || e.key === "k") {
+        e.preventDefault();
+        const currentIndex = filteredJobs.findIndex((j) => j.id === selectedJob?.id);
+        if (currentIndex > 0) {
+          setSelectedJobId(filteredJobs[currentIndex - 1]!.id);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [filteredJobs, selectedJob]);
+
   if (authenticated === false) {
-    return <LoginModal onSuccess={() => { setAuthenticated(true); checkAuthAndLoad(); }} />;
+    return (
+      <LoginModal
+        onSuccess={() => {
+          setAuthenticated(true);
+          checkAuthAndLoad();
+        }}
+      />
+    );
   }
 
+  const matchedCount = jobs.filter((j) => j.matched).length;
+
   return (
-    <div className="container">
-      {/* Header */}
-      <header className="header-wrapper">
-        <div className="brand-section">
-          <div className="brand-logo">🚀</div>
-          <div>
-            <h1 className="brand-title">Job Crawler VN</h1>
-            <p className="brand-subtitle">
-              Automated Frontend & Fullstack Job Board • Single-User Hunt Tracker
-            </p>
+    <div className="app-shell">
+      <div className="app-container">
+        {/* App Header */}
+        <StatsHeader
+          jobs={jobs}
+          onRefresh={checkAuthAndLoad}
+          onLogout={handleLogout}
+          loading={loading}
+        />
+
+        {/* Filter Bar */}
+        <FilterBar
+          filters={filters}
+          onChange={setFilters}
+          jobs={jobs}
+          matchedCount={matchedCount}
+        />
+
+        {/* Master-Detail Split Workspace */}
+        {loading ? (
+          <div className="state-card loading-state">
+            <div className="loading-spinner" />
+            <p>Syncing verified opportunities...</p>
           </div>
-        </div>
+        ) : filteredJobs.length === 0 ? (
+          <div className="state-card empty-filter-state">
+            <h3>No opportunities match current criteria</h3>
+            <p>
+              Try expanding your location, clearing search terms, or toggling off "Matched Only".
+            </p>
+            <button
+              type="button"
+              className="btn-reset-filters"
+              onClick={() =>
+                setFilters({
+                  search: "",
+                  status: "all",
+                  city: "all",
+                  level: "all",
+                  remote: "all",
+                  onlyMatched: false,
+                })
+              }
+            >
+              Reset Filters
+            </button>
+          </div>
+        ) : (
+          <div className="workspace-split">
+            {/* Left Column: Job List */}
+            <aside className="split-list-column">
+              <div className="list-column-header">
+                <span className="count-label">
+                  <strong>{filteredJobs.length}</strong> {filteredJobs.length === 1 ? "POSITION" : "POSITIONS"}
+                </span>
+                <span className="shortcut-hint">↑ ↓ to navigate</span>
+              </div>
+              <div className="list-items-container">
+                {filteredJobs.map((job) => (
+                  <JobListItem
+                    key={job.id}
+                    job={job}
+                    isSelected={job.id === selectedJob?.id}
+                    onSelect={(j) => setSelectedJobId(j.id)}
+                  />
+                ))}
+              </div>
+            </aside>
 
-        <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-          <button
-            type="button"
-            onClick={checkAuthAndLoad}
-            className="tab-btn"
-            title="Refresh jobs"
-          >
-            🔄 Refresh
-          </button>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="tab-btn"
-            style={{ borderColor: "rgba(244, 63, 94, 0.3)", color: "var(--accent-rose)" }}
-          >
-            🔒 Lock
-          </button>
-        </div>
-      </header>
-
-      {/* Stats Summary */}
-      <StatsHeader jobs={jobs} />
-
-      {/* Filter and Search Bar */}
-      <FilterBar filters={filters} onChange={setFilters} jobs={jobs} />
-
-      {/* Jobs List */}
-      {loading ? (
-        <div className="empty-state">
-          <div className="empty-icon">⏳</div>
-          <h3>Loading jobs from database...</h3>
-        </div>
-      ) : filteredJobs.length === 0 ? (
-        <div className="glass-panel empty-state">
-          <div className="empty-icon">🎯</div>
-          <h3 style={{ marginBottom: "0.5rem", color: "#ffffff" }}>No matching jobs found</h3>
-          <p style={{ maxWidth: "420px", margin: "0 auto 1.5rem" }}>
-            Try relaxing your search terms or changing your status and location filters.
-          </p>
-          <button
-            type="button"
-            className="tab-btn active"
-            onClick={() =>
-              setFilters({
-                search: "",
-                status: "all",
-                city: "all",
-                level: "all",
-                remote: "all",
-                onlyMatched: false,
-              })
-            }
-          >
-            Reset All Filters
-          </button>
-        </div>
-      ) : (
-        <div className="jobs-grid">
-          {filteredJobs.map((job) => (
-            <JobCard
-              key={job.id}
-              job={job}
-              onStatusChange={handleStatusChange}
-              onSelect={setSelectedJob}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Detail Modal */}
-      <JobDetailModal
-        job={selectedJob}
-        onClose={() => setSelectedJob(null)}
-        onStatusChange={handleStatusChange}
-      />
+            {/* Right Column: Detail Inspector */}
+            <main className="split-detail-column">
+              <JobDetailPane
+                job={selectedJob}
+                onStatusChange={handleStatusUpdate}
+              />
+            </main>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
