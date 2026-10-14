@@ -23,7 +23,7 @@ notify: { telegram: { enabled: true, onlyMatched: true } }
 
 export function testJob(overrides: Partial<Job> = {}): Job {
   return {
-    id: "id1", title: "Dev", company: "Co", city: "Hanoi", level: null, expMin: null, expMax: null,
+    id: "id1", title: "Frontend Developer", company: "Co", city: "Hanoi", level: null, expMin: null, expMax: null,
     salaryMin: null, salaryMax: null, currency: null, negotiable: false, remote: null, skills: [],
     sources: [{ site: "x", url: "https://x/1" }], description: "", postedAt: null,
     firstSeenAt: "2026-10-12T00:00:00.000Z", matched: false, status: "new", ...overrides,

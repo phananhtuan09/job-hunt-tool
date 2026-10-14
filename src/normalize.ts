@@ -136,6 +136,7 @@ export function parseRemote(title: string, description: string, workFromHome?: b
   const text = `${title} ${description}`.toLowerCase();
   if (/hybrid/.test(text)) return "hybrid";
   if (workFromHome || /\bremote\b/.test(title.toLowerCase())) return "remote";
+  if (/\b(onsite|on-site|tai van phong|tại văn phòng)\b/.test(text)) return "onsite";
   return null;
 }
 

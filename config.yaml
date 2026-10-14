@@ -1,10 +1,10 @@
 keywords: ["frontend developer", "fullstack developer", "reactjs"]
-locations: ["Ho Chi Minh City", "Hanoi"]
-levels: ["junior", "middle", "senior"]
-experience: { min: 1, max: 5 }
-salary: { minVND: 20000000, includeNegotiable: true }
+locations: ["Ho Chi Minh City"]
+levels: ["middle", "senior"]
+experience: { min: 3, max: 4 }
+salary: { minVND: 15000000, includeNegotiable: true }
 remote: any # any | remote | onsite | hybrid
-postedWithinDays: 3
+postedWithinDays: 30
 sources:
   serpapi: { enabled: false, pagesPerQuery: 1 }
   jsearch: { enabled: false }
