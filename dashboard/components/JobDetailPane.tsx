@@ -10,6 +10,7 @@ import {
   IconGlobe,
   IconLocation,
   IconSalary,
+  IconSearch,
   IconSparkles,
 } from "./Icons";
 
@@ -58,6 +59,8 @@ export function JobDetailPane({ job, onStatusChange }: JobDetailPaneProps) {
 
   const primaryUrl = job.sources[0]?.url || "";
   const primarySite = job.sources[0]?.site || "Direct";
+  const isLinkedIn = primarySite.toLowerCase().includes("linkedin") || primaryUrl.includes("linkedin.com");
+  const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(`${job.company} ${job.title}`)}`;
 
   const handleCopyLink = () => {
     if (!primaryUrl) return;
@@ -95,6 +98,18 @@ export function JobDetailPane({ job, onStatusChange }: JobDetailPaneProps) {
               <IconExternalLink size={14} />
             </a>
           )}
+          {isLinkedIn && (
+            <a
+              href={googleSearchUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-secondary-search"
+              title="Tìm tin tuyển dụng trên Google nếu mạng bị chặn LinkedIn"
+            >
+              <IconSearch size={14} />
+              <span>Tìm trên Google</span>
+            </a>
+          )}
           {primaryUrl && (
             <button
               type="button"
@@ -108,6 +123,15 @@ export function JobDetailPane({ job, onStatusChange }: JobDetailPaneProps) {
           )}
         </div>
       </div>
+
+      {isLinkedIn && (
+        <div className="linkedin-notice-banner">
+          <span className="notice-icon">💡</span>
+          <div className="notice-text">
+            <strong>Mẹo mở LinkedIn:</strong> Nhiều nhà mạng tại VN (Viettel, VNPT, FPT) chặn domain <code>linkedin.com</code> nên mở trực tiếp sẽ báo lỗi. Bạn hãy bật <strong>Cloudflare WARP (1.1.1.1)</strong> hoặc <strong>VPN</strong> để mở link gốc, hoặc bấm <strong>Tìm trên Google</strong> ở trên để xem bài đăng trên các nền tảng khác.
+          </div>
+        </div>
+      )}
 
       {/* Quick triage status segmented bar */}
       <div className="triage-section">

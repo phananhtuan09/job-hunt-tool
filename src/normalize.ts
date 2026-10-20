@@ -107,10 +107,17 @@ export function parseLevel(title: string): Level | null {
 }
 
 export function parseExperience(description: string): { expMin: number | null; expMax: number | null } {
-  const m = description.toLowerCase().match(/(\d{1,2})\s*(?:(?:-|–|to)\s*(\d{1,2}))?\s*\+?\s*(?:years?|yrs?|năm)\b/);
-  if (!m) return { expMin: null, expMax: null };
-  const min = Number(m[1]);
-  return { expMin: min, expMax: m[2] ? Number(m[2]) : null };
+  const regex = /(\d{1,2})\s*(?:(?:-|–|to)\s*(\d{1,2}))?\s*\+?\s*(?:years?|yrs?|năm)\b/gi;
+  const matches = [...description.toLowerCase().matchAll(regex)];
+
+  for (const m of matches) {
+    const min = Number(m[1]);
+    const max = m[2] ? Number(m[2]) : null;
+    if (min > 20 || (max !== null && max > 25)) continue;
+    return { expMin: min, expMax: max };
+  }
+
+  return { expMin: null, expMax: null };
 }
 
 const UNIT_MS: [RegExp, number][] = [

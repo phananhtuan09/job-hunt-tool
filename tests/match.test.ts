@@ -59,6 +59,9 @@ describe("evaluateMatch", () => {
 
     // Neither matches -> fails
     expect(evaluateMatch(testJob({ level: "junior", expMin: 1, expMax: 2 }), orConfig, now)).toBe(false);
+    expect(evaluateMatch(testJob({ level: null, expMin: 1, expMax: null }), orConfig, now)).toBe(false);
+    expect(evaluateMatch(testJob({ level: null, expMin: 2, expMax: null }), orConfig, now)).toBe(false);
+    expect(evaluateMatch(testJob({ level: null, expMin: 3, expMax: null }), orConfig, now)).toBe(true);
     expect(evaluateMatch(testJob({ level: "intern" }), orConfig, now)).toBe(false);
   });
 

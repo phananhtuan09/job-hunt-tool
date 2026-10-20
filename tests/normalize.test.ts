@@ -29,6 +29,7 @@ describe("parseLevel / parseExperience", () => {
     expect(parseExperience("Yêu cầu 2 năm kinh nghiệm")).toEqual({ expMin: 2, expMax: null });
     expect(parseExperience("3+ years of React")).toEqual({ expMin: 3, expMax: null });
     expect(parseExperience("2-4 years")).toEqual({ expMin: 2, expMax: 4 });
+    expect(parseExperience("With over 50 years of experience, we require 5+ years of React")).toEqual({ expMin: 5, expMax: null });
     expect(parseExperience("no info")).toEqual({ expMin: null, expMax: null });
   });
 });

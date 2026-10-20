@@ -35,9 +35,9 @@ export function evaluateMatch(job: Job, config: Config, now: Date): boolean {
   const expMatch =
     hasExp &&
     (() => {
-      const low = job.expMin ?? 0;
-      const high = job.expMax ?? Infinity;
-      return low <= config.experience.max && high >= config.experience.min;
+      const min = job.expMin ?? 0;
+      const max = job.expMax ?? job.expMin ?? Infinity;
+      return min <= config.experience.max && max >= config.experience.min;
     })();
 
   if (hasLevel || hasExp) {
