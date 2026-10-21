@@ -1,34 +1,17 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
+import { evaluateDecision, formatSalary, postedAgeLabel } from "@/lib/decision";
 import type { Job, Status } from "@/lib/types";
-import { IconLocation, IconSalary, IconSparkles } from "./Icons";
+import { IconArchive, IconLocation, IconSalary, IconSend, IconSparkles, IconX } from "./Icons";
 
 interface JobListItemProps {
   job: Job;
   isSelected: boolean;
   onSelect: (job: Job) => void;
-}
-
-function formatSalary(job: Job): string | null {
-  if (job.salaryMin && job.salaryMax) {
-    if (job.currency === "USD") {
-      return `$${job.salaryMin.toLocaleString()} - $${job.salaryMax.toLocaleString()}`;
-    }
-    const minM = Math.round(job.salaryMin / 1e6);
-    const maxM = Math.round(job.salaryMax / 1e6);
-    return `${minM}–${maxM}M`;
-  }
-  if (job.salaryMin) {
-    if (job.currency === "USD") return `From $${job.salaryMin.toLocaleString()}`;
-    return `≥ ${Math.round(job.salaryMin / 1e6)}M`;
-  }
-  if (job.salaryMax) {
-    if (job.currency === "USD") return `Up to $${job.salaryMax.toLocaleString()}`;
-    return `≤ ${Math.round(job.salaryMax / 1e6)}M`;
-  }
-  if (job.negotiable) return "Negotiable";
-  return null;
+  /** Quick triage without opening the detail pane. Hidden in the
+   *  "Đã xử lý" view's restore flow is handled by the detail pane instead. */
+  onQuickAction?: (id: string, status: Status) => void;
 }
 
 function getSourceClass(site?: string): string {
@@ -40,9 +23,23 @@ function getSourceClass(site?: string): string {
   return "source-default";
 }
 
-export function JobListItem({ job, isSelected, onSelect }: JobListItemProps) {
+const STATUS_LABELS: Record<Status, string> = {
+  new: "Chưa xử lý",
+  saved: "Đã xử lý",
+  applied: "Đã apply",
+  rejected: "Đã bỏ qua",
+};
+
+export function JobListItem({ job, isSelected, onSelect, onQuickAction }: JobListItemProps) {
   const salaryText = formatSalary(job);
   const primarySource = job.sources[0]?.site || "direct";
+  const decision = useMemo(() => evaluateDecision(job), [job]);
+  const showSalary = job.salaryMin !== null || job.salaryMax !== null || job.negotiable;
+
+  const quickAction = (e: React.MouseEvent, status: Status) => {
+    e.stopPropagation();
+    onQuickAction?.(job.id, status);
+  };
 
   return (
     <div
@@ -66,7 +63,13 @@ export function JobListItem({ job, isSelected, onSelect }: JobListItemProps) {
             <span className="source-dot" />
             {primarySource}
           </span>
-          <span className={`status-dot status-${job.status}`} title={`Status: ${job.status}`} />
+          {job.status !== "new" ? (
+            <span className={`status-chip status-chip-${job.status}`}>
+              {STATUS_LABELS[job.status]}
+            </span>
+          ) : (
+            <span className="status-dot status-new" title="Chưa xử lý" />
+          )}
         </div>
       </div>
 
@@ -79,23 +82,26 @@ export function JobListItem({ job, isSelected, onSelect }: JobListItemProps) {
             {job.city === "Ho Chi Minh City" ? "HCMC" : job.city}
           </span>
         )}
-        {salaryText && (
+        {showSalary && (
           <span className="meta-pill meta-salary">
             <IconSalary size={12} />
             {salaryText}
           </span>
         )}
-        {job.remote && (
-          <span className="meta-pill">
-            {job.remote}
-          </span>
-        )}
+        {job.remote && <span className="meta-pill">{job.remote}</span>}
+        <span className="meta-pill meta-age">{postedAgeLabel(job)}</span>
         {job.matched && (
-          <span className="meta-pill meta-match" title="Matched your search filters">
+          <span className="meta-pill meta-match" title="Khớp config của bạn">
             <IconSparkles size={11} />
             Match
           </span>
         )}
+        <span
+          className={`meta-pill verdict-pill verdict-pill-${decision.verdict}`}
+          title={`Điểm khớp ${decision.score}/100 — ${decision.verdictLabel}`}
+        >
+          {decision.score} • {decision.verdictLabel}
+        </span>
       </div>
 
       {job.skills.length > 0 && (
@@ -108,6 +114,41 @@ export function JobListItem({ job, isSelected, onSelect }: JobListItemProps) {
           {job.skills.length > 4 && (
             <span className="skill-chip-sm more">+{job.skills.length - 4}</span>
           )}
+        </div>
+      )}
+
+      {onQuickAction && job.status === "new" && (
+        <div className="item-quick-actions">
+          <button
+            type="button"
+            className="quick-btn quick-btn-applied"
+            onClick={(e) => quickAction(e, "applied")}
+            title="Đã apply — ẩn khỏi inbox"
+            aria-label={`Đã apply: ${job.title}`}
+          >
+            <IconSend size={12} />
+            <span>Đã apply</span>
+          </button>
+          <button
+            type="button"
+            className="quick-btn quick-btn-saved"
+            onClick={(e) => quickAction(e, "saved")}
+            title="Lưu — đã xem/đã xử lý, ẩn khỏi inbox"
+            aria-label={`Lưu đã xử lý: ${job.title}`}
+          >
+            <IconArchive size={12} />
+            <span>Lưu & ẩn</span>
+          </button>
+          <button
+            type="button"
+            className="quick-btn quick-btn-rejected"
+            onClick={(e) => quickAction(e, "rejected")}
+            title="Bỏ qua — ẩn khỏi inbox"
+            aria-label={`Bỏ qua: ${job.title}`}
+          >
+            <IconX size={12} />
+            <span>Bỏ qua</span>
+          </button>
         </div>
       )}
     </div>
