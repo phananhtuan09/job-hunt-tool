@@ -1,17 +1,41 @@
 "use client";
 
 import React from "react";
-import type { Job, Status } from "@/lib/types";
+import type { Job } from "@/lib/types";
 import { IconFilter, IconLocation, IconSearch, IconSparkles } from "./Icons";
+
+/**
+ * Which slice of the hunt is on screen:
+ * - `inbox`: only un-triaged jobs (`status = new`) — the default view.
+ *   Anything already saved/applied/rejected never appears here again.
+ * - `processed`: everything already handled (`saved` + `applied` +
+ *   `rejected`) — the place to review or restore a hidden job.
+ * - `applied`: just the applications, for follow-up.
+ * - `all`: the whole collection, regardless of status.
+ */
+export type ViewFilter = "inbox" | "processed" | "applied" | "all";
+
+export type SortMode = "newest" | "salary" | "score";
 
 export interface FilterState {
   search: string;
-  status: "all" | Status;
+  status: ViewFilter;
   city: string;
   level: string;
   remote: string;
   onlyMatched: boolean;
+  sort: SortMode;
 }
+
+export const DEFAULT_FILTERS: FilterState = {
+  search: "",
+  status: "inbox",
+  city: "all",
+  level: "all",
+  remote: "all",
+  onlyMatched: true,
+  sort: "newest",
+};
 
 interface FilterBarProps {
   filters: FilterState;
@@ -20,22 +44,42 @@ interface FilterBarProps {
   matchedCount: number;
 }
 
+const VIEW_TABS: { key: ViewFilter; label: string }[] = [
+  { key: "inbox", label: "Inbox — chưa xử lý" },
+  { key: "processed", label: "Đã xử lý" },
+  { key: "applied", label: "Đã apply" },
+  { key: "all", label: "Tất cả" },
+];
+
+export function countForView(jobs: Job[], view: ViewFilter): number {
+  switch (view) {
+    case "inbox":
+      return jobs.filter((j) => j.status === "new").length;
+    case "processed":
+      return jobs.filter((j) => j.status !== "new").length;
+    case "applied":
+      return jobs.filter((j) => j.status === "applied").length;
+    case "all":
+      return jobs.length;
+  }
+}
+
 export function FilterBar({ filters, onChange, jobs, matchedCount }: FilterBarProps) {
-  const getCount = (st: "all" | Status) => {
-    if (st === "all") return jobs.length;
-    return jobs.filter((j) => j.status === st).length;
-  };
+  // Tab counts respect the matched-only scope so a count never promises
+  // jobs the toggle is currently hiding (search/text filters still do not
+  // affect counts — they are transient).
+  const scopedJobs = filters.onlyMatched ? jobs.filter((j) => j.matched) : jobs;
 
   return (
     <div className="filter-bar-wrapper">
-      {/* Top search & status tabs */}
+      {/* Search & view tabs */}
       <div className="filter-main-row">
         <div className="search-box">
           <IconSearch size={16} className="search-icon-svg" />
           <input
             type="text"
             className="search-field"
-            placeholder="Search role, company, skill (e.g. React, Next.js, TypeScript)..."
+            placeholder="Tìm theo title, công ty, skill (vd: React, Next.js, TypeScript)..."
             value={filters.search}
             onChange={(e) => onChange({ ...filters, search: e.target.value })}
           />
@@ -44,32 +88,31 @@ export function FilterBar({ filters, onChange, jobs, matchedCount }: FilterBarPr
               type="button"
               className="clear-search-btn"
               onClick={() => onChange({ ...filters, search: "" })}
+              aria-label="Xóa từ khóa tìm kiếm"
             >
               ✕
             </button>
           )}
         </div>
 
-        {/* Status segmented tabs */}
-        <div className="status-tabs-group">
-          {(["all", "new", "saved", "applied", "rejected"] as const).map((st) => {
-            const count = getCount(st);
-            return (
-              <button
-                key={st}
-                type="button"
-                className={`filter-tab ${filters.status === st ? "active" : ""}`}
-                onClick={() => onChange({ ...filters, status: st })}
-              >
-                <span>{st.toUpperCase()}</span>
-                <span className="tab-pill-count">{count}</span>
-              </button>
-            );
-          })}
+        <div className="status-tabs-group" role="tablist" aria-label="Chế độ xem">
+          {VIEW_TABS.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              role="tab"
+              aria-selected={filters.status === tab.key}
+              className={`filter-tab ${filters.status === tab.key ? "active" : ""}`}
+              onClick={() => onChange({ ...filters, status: tab.key })}
+            >
+              <span>{tab.label}</span>
+              <span className="tab-pill-count">{countForView(scopedJobs, tab.key)}</span>
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Secondary filter chips & matched toggle */}
+      {/* Secondary filters, sort & matched toggle */}
       <div className="filter-secondary-row">
         <div className="dropdowns-group">
           <div className="select-container">
@@ -78,8 +121,9 @@ export function FilterBar({ filters, onChange, jobs, matchedCount }: FilterBarPr
               className="select-control"
               value={filters.city}
               onChange={(e) => onChange({ ...filters, city: e.target.value })}
+              aria-label="Lọc theo địa điểm"
             >
-              <option value="all">All Locations</option>
+              <option value="all">Mọi địa điểm</option>
               <option value="Ho Chi Minh City">Ho Chi Minh City</option>
               <option value="Hanoi">Hanoi</option>
               <option value="Da Nang">Da Nang</option>
@@ -92,8 +136,9 @@ export function FilterBar({ filters, onChange, jobs, matchedCount }: FilterBarPr
               className="select-control"
               value={filters.level}
               onChange={(e) => onChange({ ...filters, level: e.target.value })}
+              aria-label="Lọc theo level"
             >
-              <option value="all">All Levels</option>
+              <option value="all">Mọi level</option>
               <option value="junior">Junior</option>
               <option value="middle">Middle</option>
               <option value="senior">Senior</option>
@@ -106,16 +151,32 @@ export function FilterBar({ filters, onChange, jobs, matchedCount }: FilterBarPr
               className="select-control"
               value={filters.remote}
               onChange={(e) => onChange({ ...filters, remote: e.target.value })}
+              aria-label="Lọc theo hình thức làm việc"
             >
-              <option value="all">Any Work Mode</option>
-              <option value="remote">Remote Only</option>
+              <option value="all">Mọi hình thức</option>
+              <option value="remote">Remote</option>
               <option value="hybrid">Hybrid</option>
               <option value="onsite">Onsite</option>
             </select>
           </div>
+
+          <div className="select-container">
+            <select
+              className="select-control"
+              value={filters.sort}
+              onChange={(e) =>
+                onChange({ ...filters, sort: e.target.value as SortMode })
+              }
+              aria-label="Sắp xếp danh sách"
+              title="Sắp xếp: mới đăng nhất, lương cao nhất, hoặc điểm khớp cao nhất"
+            >
+              <option value="newest">Sắp xếp: Mới nhất</option>
+              <option value="salary">Sắp xếp: Lương cao nhất</option>
+              <option value="score">Sắp xếp: Khớp nhất</option>
+            </select>
+          </div>
         </div>
 
-        {/* Only matched toggle */}
         <label className={`toggle-matched-label ${filters.onlyMatched ? "active" : ""}`}>
           <input
             type="checkbox"
@@ -125,7 +186,7 @@ export function FilterBar({ filters, onChange, jobs, matchedCount }: FilterBarPr
           />
           <span className="toggle-switch-slider" />
           <IconSparkles size={13} />
-          <span className="toggle-text">Matched Only</span>
+          <span className="toggle-text">Chỉ job matched</span>
           <span className="matched-counter-badge">{matchedCount}</span>
         </label>
       </div>
